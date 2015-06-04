@@ -27,9 +27,9 @@ class LogStash::Inputs::HttpClient < LogStash::Inputs::Base
   end # def register
 
   def run(queue)
-    start = Time.now
     Net::HTTP.start @uri.host, @uri.port do |http|
       Stud.interval(@interval) do
+        start = Time.now
         resp = http.get @url
         elapsed = Time.now - start
         event = LogStash::Event.new("message" => resp.body, "http_response_code" => resp.code, "http_request_took" => elapsed, "http_response_headers" => resp, "host" => @host)
