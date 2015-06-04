@@ -2,7 +2,6 @@
 require "logstash/inputs/base"
 require "logstash/namespace"
 require "stud/interval"
-require "socket" # for Socket.gethostname
 require "net/http"
 
 # Query a http server at a regular interval to get events
@@ -24,7 +23,6 @@ class LogStash::Inputs::HttpClient < LogStash::Inputs::Base
 
   public
   def register
-    @host = Socket.gethostname
     @uri = URI(@url)
   end # def register
 
