@@ -33,8 +33,8 @@ class LogStash::Inputs::HttpClient < LogStash::Inputs::Base
     Net::HTTP.start @uri.host, @uri.port do |http|
       Stud.interval(@interval) do
         resp = http.get @url
-        elapsed = Time.now - start # => 2.5 - doh! keepalive, but no pipelining
-        event = LogStash::Event.new("http_response" => resp, "http_request_took" => elapsed, "host" => @host)
+        elapsed = Time.now - start
+        event = LogStash::Event.new("message" => resp.body, "http_response_code" => resp.code, "http_request_took" => elapsed, "http_response_headers" => resp, "host" => @host)
         decorate(event)
         queue << event
       end #interval loop
