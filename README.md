@@ -1,4 +1,4 @@
-# Logstash Plugin
+# Logstash HTTP Client Input Plugin
 
 This is a plugin for [Logstash](https://github.com/elasticsearch/logstash).
 
