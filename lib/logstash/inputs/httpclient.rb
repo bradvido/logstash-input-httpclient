@@ -90,7 +90,7 @@ class LogStash::Inputs::HttpClient < LogStash::Inputs::Base
           decorate(event)
           queue_start = Time.now
           queue << event
-          queue_elapsed = Time.now - http_start
+          queue_elapsed = Time.now - queue_start
           queue_times.push queue_elapsed
         end
       end #interval loop
