@@ -6,11 +6,12 @@ require "net/http"
 
 # Query a http server with GET requests at a regular interval. 
 #
-# HTTP GET requests are performed using the provided url (which may contain parameters).
+#[%hardbreaks]
+# HTTP GET requests are performed using the provided url (which may contain URL parameters).
 # The HTTP Response body will be added to "message" after being decoded by the provided codec.
 # There is an additional header named `X-Logstash-Avg-Queue-Secs` added to each HTTP request. This is the
-# average seconds it took for the past 20 events to be accepted by Logstash's input queue. 
-# The HTTP server could use this as a indication of how many events the client is able to process without blocking.
+# average seconds it took for the past 20 events to be accepted by Logstash's bounded input queue. 
+# The HTTP server could use this as a indication of how many events the Logstash instance is able to process (throughput).
 
 
 class LogStash::Inputs::HttpClient < LogStash::Inputs::Base
@@ -19,15 +20,22 @@ class LogStash::Inputs::HttpClient < LogStash::Inputs::Base
   # If undefined, Logstash will complain, even if codec is unused.
   default :codec, "plain" 
 
-  # The message string to use in the event.
+  #[%hardbreaks]
+  # The full url to execute GET requests on. 
+  # It may contain URL parameters (you are responsible for URL encoding them)
+  # e.g. `https://mywebservice.int/`
+  # e.g. `http://mywebservice.int?queue=logstash_events&numevents=10`
+  #
+  # IMPORTANT: make sure you end with a slash (if not using url params). `http://mywebservice.int` is not valid, it must be `http://myswebservice.int/`
+  # todo: auto-append slash if user forgets
   config :url, :validate => :string, :required => true
 
   # Set how frequently we should query the url for messages
   #
-  # The default, `1`, means send a message every second.
-  config :interval, :validate => :number, :default => 1
+  # The default, `10`, means send a message every 10 seconds.
+  config :interval, :validate => :number, :default => 10
   
-  # The name of the object that http response meta-data (headerd, timing, etc) should be added to.
+  # The name of the object that http response meta-data (headers, response code, etc) should be added to.
   config :response_object_name, :validate => :string, :default => "http_response"
   
   # Should the http headers be added to the `response_object_name`?
