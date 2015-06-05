@@ -65,7 +65,7 @@ class LogStash::Inputs::HttpClient < LogStash::Inputs::Base
       Stud.interval(@interval) do
         begin
           http_start = Time.now
-          request = Net::HTTP::Get.new(@uri.path)          
+          request = Net::HTTP::Get.new(@uri.request_uri)
           request ["X-Logstash-Avg-Queue-Secs"] = arr_avg(queue_times, 20, 3)
           response = http.request request  # Net::HTTPResponse object
           http_elapsed = Time.now - http_start
