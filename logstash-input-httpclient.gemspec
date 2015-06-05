@@ -1,6 +1,6 @@
 Gem::Specification.new do |s|
   s.name = 'logstash-input-httpclient'
-  s.version         = '0.9.0'
+  s.version         = '0.1.0'
   s.licenses = ['Apache License (2.0)']
   s.summary = "This input queries a http url at a regular interval and sends the responses to logstash."
   s.description = "This gem is a logstash plugin required to be installed on top of the Logstash core pipeline using $LS_HOME/bin/plugin install gemname. This gem is not a stand-alone program"
