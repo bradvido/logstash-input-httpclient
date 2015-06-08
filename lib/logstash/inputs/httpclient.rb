@@ -62,37 +62,46 @@ class LogStash::Inputs::HttpClient < LogStash::Inputs::Base
     queue_times = Array.new #track an average of how long it's taking to queue events into logstash
     #::start creates a connection to the HTTP server and keeps it alive for the duration
     Net::HTTP.start @uri.host, @uri.port, :use_ssl => @uri.scheme == 'https' do |http|
-      Stud.interval(@interval) do
+      while true
         begin
-          http_start = Time.now
-          request = Net::HTTP::Get.new(@uri.request_uri)
-          request ["X-Logstash-Avg-Queue-Secs"] = arr_avg(queue_times, 20, 3)
-          response = http.request request  # Net::HTTPResponse object
-          http_elapsed = Time.now - http_start
-        rescue => e
-          @logger.warn("Http request failed, will retry", :exception => e)
-          @logger.warn(e.backtrace)
+          sleepIval = @interval
+          begin
+            http_start = Time.now
+            request = Net::HTTP::Get.new(@uri.request_uri)
+            request ["X-Logstash-Avg-Queue-Secs"] = arr_avg(queue_times, 20, 3)
+            response = http.request request  # Net::HTTPResponse object
+            http_elapsed = Time.now - http_start
+          rescue => e
+            @logger.warn("Http request failed, will retry", :exception => e)
+            @logger.warn(e.backtrace)
+            sleep(sleepIval)
+            retry
+          end
+
+          if response["X-More-Events-Available"] == "true"
+            sleepIval = 0 #don't wait if the server indicated there are more events ready now
+          end
+
+          @codec.decode(response.body) do |event|
+            event[@response_object_name] = {}
+            if @include_response_headers 
+              event[@response_object_name]["headers"] = response
+            end
+            if @include_response_code 
+              event[@response_object_name]["code"] = response.code
+            end
+            if @include_http_request_time 
+              event[@response_object_name]["took_secs"] = http_elapsed
+            end
+            decorate(event)
+            queue_start = Time.now
+            queue << event
+            queue_elapsed = Time.now - queue_start
+            queue_times.push queue_elapsed
+          end
+        ensure
           sleep(@interval)
-          retry
-        end
-        #event = LogStash::Event.new("message" => response.body)
-        @codec.decode(response.body) do |event|
-          event[@response_object_name] = {}
-          if @include_response_headers 
-            event[@response_object_name]["headers"] = response
-          end
-          if @include_response_code 
-            event[@response_object_name]["code"] = response.code
-          end
-          if @include_http_request_time 
-            event[@response_object_name]["took_secs"] = http_elapsed
-          end
-          decorate(event)
-          queue_start = Time.now
-          queue << event
-          queue_elapsed = Time.now - queue_start
-          queue_times.push queue_elapsed
-        end
+        end 
       end #interval loop
     end #HTTP keepalive
   end # def run
