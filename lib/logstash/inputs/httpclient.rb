@@ -24,11 +24,6 @@ require "net/http"
 # `X-Logstash-Queue-Total-Secs` The time (in seconds) that it took to queue all of the events (logstash uses a fixed queue length of 20, so it blocks when full).
 # `X-Successful-Batch-Ids` If the server provided a `X-Messages-Batch-Id` header in the previous request, that value is set in this header to acknowledge the messages were successfully sent to logstash.
 
-# There is an additional header named `X-Logstash-Avg-Queue-Secs` added to each HTTP request. This is the
-# average seconds it took for the past 20 events to be accepted by Logstash's bounded input queue. 
-# The HTTP server could use this as a indication of how many events the Logstash instance is able to process (throughput).
-
-
 class LogStash::Inputs::HttpClient < LogStash::Inputs::Base
 	config_name "httpclient"
 
