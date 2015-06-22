@@ -1,7 +1,6 @@
 # encoding: utf-8
 require "logstash/inputs/base"
 require "logstash/namespace"
-require "stud/interval"
 require "net/http"
 
 # Query a HTTP server with GET requests at a regular interval and process the events returned in the response body. 
