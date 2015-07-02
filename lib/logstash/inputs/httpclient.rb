@@ -174,6 +174,8 @@ class LogStash::Inputs::HttpClient < LogStash::Inputs::Base
 				retry
 			end
 		end #end begin outside of the loop
-		@logger.warn("Unexpected: HTTP client has ended")
+		if !shutdown_signal_received
+			@logger.warn("Unexpected: HTTP client has ended")
+		end
 	end # def run
 end # class LogStash::Inputs::Example
