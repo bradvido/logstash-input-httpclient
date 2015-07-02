@@ -80,11 +80,11 @@ class LogStash::Inputs::HttpClient < LogStash::Inputs::Base
 			codec_parse_time = nil
 			http_request_time = nil
 			batch_id = nil
-			
+			shutdown_signal_received=false
 			@logger.debug("Initializing http connection")
 			#Net::HTTP.start creates a connection to the HTTP server and keeps it alive for the duration. Throws an EOFError when connection breaks.
 			Net::HTTP.start @uri.host, @uri.port, :use_ssl => @uri.scheme == 'https' do |http|
-				while true
+				while !shutdown_signal_received
 					http_start = Time.now
 					sleepIval = @interval
 					@logger.debug("Executing http get request: " + @uri.host + @uri.request_uri)
@@ -108,7 +108,7 @@ class LogStash::Inputs::HttpClient < LogStash::Inputs::Base
 					batch_id = response["X-Messages-Batch-Id"] #save the batch id of the event in this response body, so it can be ack'd in the next http request
 					http_request_time = Time.now - http_start
 					
-					
+					@logger.debug("HTTP GET response code: #{response.code.to_i} from "+ response["Server"])
 					#check if events were returned and process them using the defined @codec
 					num_events = 0
 					if response.code.to_i == @no_messages_response_code
@@ -146,7 +146,7 @@ class LogStash::Inputs::HttpClient < LogStash::Inputs::Base
 							#@logger.info("Event has been queued")
 						}
 						queue_time = Time.now - queue_start
-						@logger.info("HTTP GET request processed #{events.length} events. http_request_secs=#{http_request_time}, codec_parse_secs=#{codec_parse_time}, queueing_secs=#{queue_time}, queue_size=#{queue.length}/#{queue.max}, queue_num_threads_waiting=#{queue.num_waiting}. Server=" + response["Server"] + ". Request=" + @uri.host + @uri.request_uri)
+						@logger.info("HTTP GET request processed #{events.length} events. more_available=#{response["X-More-Events-Available"]}, http_request_secs=#{http_request_time}, codec_parse_secs=#{codec_parse_time}, queueing_secs=#{queue_time}, queue_size=#{queue.length}/#{queue.max}, queue_num_threads_waiting=#{queue.num_waiting}. Server=#{response["Server"]}. Request=#{@uri.host}:#{@uri.port}#{@uri.request_uri}")
 					end #end normal processing of HTTP response body
 					
 					#TODO: should we provide an option to post back (ack) immetiately once we sucecssfully queue all the messages in the response
@@ -162,12 +162,17 @@ class LogStash::Inputs::HttpClient < LogStash::Inputs::Base
 				#this seems to happen if the http keepalive times out and server disconnects
 				@logger.warn("HTTP Connection has closed (EOFError), will reset http client connection and try again.", :exception => x)
 				sleep(1)
+			elsif x.instance_of?(LogStash::ShutdownSignal)
+				shutdown_signal_received = true
+				@logger.warn("Logstash shutdown signal recieved. Ending now")
 			else
 				@logger.warn("Error occurred, resetting http client connection and trying again in 10 seconds.", :exception => x)
 				@logger.warn(x.backtrace)
 				sleep(10) #todo: configurable sleep time for errors?
 			end
-			retry
+			if !shutdown_signal_received
+				retry
+			end
 		end #end begin outside of the loop
 		@logger.warn("Unexpected: HTTP client has ended")
 	end # def run
